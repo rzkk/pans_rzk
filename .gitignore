@@ -1,3 +1,9 @@
+build/
+.vscode/
+lib/
+bin/
+*.log
+
 # Build and Release Folders
 bin-debug/
 bin-release/
