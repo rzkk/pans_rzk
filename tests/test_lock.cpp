@@ -141,8 +141,16 @@ std::chrono::nanoseconds BenchmarkAtomicCas(std::size_t thread_count){
                         // [注意] 高竞争时 CAS 可能反复失败，带来额外的缓存一致性开销。
                        uint64_t expected = g_atomicCounter.load(std::memory_order_relaxed);
                        while(!g_atomicCounter.compare_exchange_weak(expected , expected+1 , std::memory_order_relaxed ,std::memory_order_relaxed )){
-
                        }
+                       // success_order, failure_order : CAS 操作成功时使用的内存序和CAS 操作失败时使用的内存序。
+                       // memory_order_relaxed : 
+                       // 1. 原子性（Atomicity） : 多个线程不会因为执行 CAS 而产生普通变量那样的数据竞争。
+                       // 2 不提供额外的跨变量同步和排序约束 : 其只要求这个原子操作自身正确，不额外要求它负责同步其他数据。
+                            //relaxed：保证原子操作本身的正确性，不额外同步其他数据。
+                            //acquire：获取同步关系，使后续操作能够正确观察已发布的数据。
+                            //release：发布先前的写入，供之后执行匹配 acquire 的线程观察。
+                            //acq_rel：同时具备获取和释放语义。
+
                     }
                 } );
     return elapsed;
