@@ -17,7 +17,7 @@
 // 注意：这里仅为学习示例；生产级封装还需要处理 pthread API 返回的错误码。
 
 #if defined(__x86_64__) || defined(__i386__)
-#include<immintrin.h>// x86 的 _mm_pause() 指令内在函数
+#include<immintrin.h>  // x86 的 _mm_pause() 指令内在函数
 #elif  defined(__aarch64__) || defined(__arm__)
 #include<arm_acle.h>
 #endif
@@ -53,7 +53,7 @@ namespace pans
 // 这是对 pthread_spinlock_t 的 C++ RAII 风格包装。
 // 为什么提供 lock() 和 unlock()？
 // std::lock_guard<T> 要求 T 满足 BasicLockable：必须有 lock() / unlock()。
-// 因此无需自己手动写 unlock()，直接使用 std::lock_guard<pans::Spinlock>。
+// 因此lock_guard 无需自己手动写 unlock()，直接使用 std::lock_guard<pans::Spinlock>。
 class Spinlock{
 public:
     // 构造时初始化底层锁。
@@ -88,6 +88,7 @@ private:
 // =================== 非 Linux：C++20 原子自旋锁 ====================
 // 用一个仅保存“已上锁 / 未上锁”状态的原子标志实现锁。
 // false = 没人持有；true = 已被某个线程抢到。
+//Test-Test-And-Set（TTAS） 自旋锁实现方式
 class Spinlock{
 public:
     // 类型别名：可以写 Spinlock::Lock guard(lock_obj)。
@@ -104,9 +105,8 @@ public:
 
     void lock() noexcept{
         // test_and_set() 会“原子地设为 true”，同时返回修改之前的值。
-        // 返回 false：说明原先没人持有锁，本线程拿锁成功，退出循环。
-        // 返回 true ：说明被占用，进入循环继续等待。
-        //
+        // 若旧值为 false（未锁定）→ 抢锁成功，跳出循环
+        // 若旧值为 true（已锁定）→  抢锁失败，进入内层,进入循环继续等待。
         // acquire：拿锁成功后，临界区中的读写不能重排到锁获取之前；
         //          与其他线程 unlock() 的 release 配对，保证看到其写入。
         while(m_mutex.test_and_set(std::memory_order_acquire)){  // 抢锁
@@ -114,8 +114,9 @@ public:
             // 这里先“观察”锁有没有释放，不必每次都做代价较高的
             // test_and_set() 读-改-写原子操作。
             //
-            // relaxed 足够：这个内层循环只负责等状态变化，不访问受锁
-            // 保护的数据；真正获取锁时，外层 test_and_set(acquire) 负责同步。
+            // relaxed 足够：这个内层循环只负责等状态变化，不访问受锁保护的数据
+            // ；真正获取锁时，外层 test_and_set(acquire) 负责同步。
+            //内while 避免在高竞争下，每一个等待线程都不断执行原子读-改-写操作。
             while( m_mutex.test(std::memory_order_relaxed) ){   // 看看锁释放没 ， 要不要去抢一下
                 cpu_relax();  // 告诉cpu , 在忙等 ， 
             }
@@ -123,6 +124,8 @@ public:
             // 在我们争抢之前，别的线程可能先一步拿走。
         }
     }
+
+    
     // release：保证本线程在临界区的写入先于“解锁”对其他线程可见。
     // 下一位线程 acquire 成功后才能安全观察到这些写入。
     void unlock() noexcept{
@@ -140,6 +143,10 @@ private:
     std::atomic_flag m_mutex = ATOMIC_FLAG_INIT;
 };
 
+
+// acquire ：成功加锁时使用 ， 不仅保证锁状态的原子操作，还与之前的 release 配合建立跨线程同步关系。
+// relaxed：轮询时只需要relaxed , 不需要承担受保护数据的同步职责
+//release：解锁时使用, 将临界区内的写入发布给后续通过匹配的 acquire 成功获取锁的线程。
 
 
 #endif
