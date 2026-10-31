@@ -15,7 +15,7 @@
 
 #include <pans/macros.h>
 
-constexpr int RUNS = 7;
+constexpr int RUNS = 20;
 u64 g_Counter = 0;
 u64 g_target = 0;
 
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
     std::cout << std::fixed << std::setprecision(2);
     std::cout << "operations: " << g_target << ", average of " << RUNS << " runs\n\n";
 
-    const std::vector<std::size_t> thread_counts = {1, 2, 3, 4, 5,6,7,8,10,16,20};
+    const std::vector<std::size_t> thread_counts = {1, 2,  4,7,8,16,20};
     for (const std::size_t thread_count : thread_counts)
     {
         std::cout << "threads: " << thread_count << '\n';
