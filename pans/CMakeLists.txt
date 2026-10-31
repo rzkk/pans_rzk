@@ -34,7 +34,9 @@ target_include_directories(pans
 
 
 # pans_options 是项目内部的编译配置，不传递给外部使用者  // 使用private 
-target_link_libraries(pans PRIVATE pans_options) # 继承所有编译/链接选项
+# target_link_libraries(pans PRIVATE pans_options) # 继承所有编译/链接选项
+target_link_libraries(pans PRIVATE  pans_options)   # 使用 PRIVATE ， 外面的test 就无法使用pans cmake定义的细节 如PANS_DEBUG 
+
 
 # 主库可能需要更严格的编译选项
 target_compile_options(pans PRIVATE
@@ -81,3 +83,5 @@ install(
 #     # CMake 包相关文件安装位置
 #     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/pans"
 # )
+
+
