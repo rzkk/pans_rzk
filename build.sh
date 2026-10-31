@@ -10,7 +10,7 @@ set -euo pipefail
 BUILD_DIR="build/debug"
 # EXEC_PATH="./bin/tests"
 # TEST_BUILD_DIR="$BUILD_DIR"
-clear 
+
 
 # rm -rf $BUILD_DIR   
 # mkdir  $EXEC_PATH
