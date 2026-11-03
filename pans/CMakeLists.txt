@@ -6,11 +6,14 @@ file(GLOB_RECURSE PANS_SOURCES CONFIGURE_DEPENDS
 # *.cc  
 # *.c
 )
+
+# 前面两个是暴露给外部的
+# 后面两个是内部的头文件
 file(GLOB_RECURSE PANS_HEADERS CONFIGURE_DEPENDS 
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/include/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/include/*.hpp"
 )
 
 add_library(pans STATIC ${PANS_SOURCES} ${PANS_HEADERS})  # 生成 libpans.a

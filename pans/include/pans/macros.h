@@ -7,12 +7,13 @@
 #include<cstdint> 
 
 // 对外提供的接口 ： x 为false  : 进入断言
-// unlikely : c++20 , 告诉编译器这个条件极大概率不成立
-// #define PANS_ASSERT(x) \
-//     if(!(x)) [[unlikely]]{ \
-//         std::cerr<<__FILE__<< ":" << __LINE__  <<"  ASSERT FAILED : " << #x <<"\nStacktrace : to do \n " ;\
-//         assert(x); \
-//     }
+/*/ unlikely : c++20 , 告诉编译器这个条件极大概率不成立
+ #define PANS_ASSERT(x) \
+     if(!(x)) [[unlikely]]{ \
+         std::cerr<<__FILE__<< ":" << __LINE__  <<"  ASSERT FAILED : " << #x <<"\nStacktrace : to do \n " ;\
+         assert(x); \
+     }
+*/
 
 //带说明文字的assert  , 带有info参数
 #define PANS_ASSERT(x , w) \
