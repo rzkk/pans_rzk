@@ -21,13 +21,18 @@ class AppenderAccess; // 这里只做前置声明
 class PANS_API Appender final{
 public:
     class Impl; // 内部类的前向声明
-
+    //前向声明可以让你持有某个类型的指针，但不代表所有涉及该类型的操作都可以在类型不完整时完成。
     Appender(const Appender &) = delete;
     Appender& operator=(const Appender&) = delete;
     Appender(Appender &&) = delete;
     Appender& operator=(Appender&&) = delete;
 
-    ~Appender() = default;
+    
+    //~Appender() = default;
+    // 因为这里  std::unique_ptr<Impl>m_impl; 中的Impl 只是前向声明， 没有完整定义 
+    ////std::unique_ptr<Impl> 允许 Impl 是不完整类型
+    //但使用默认删除器销毁对象时，Impl 必须已经是完整类型。
+    ~Appender();
 
     //不同Appender有不同的日志等级: appender的等级控制要不要在这个目的地输出
     void setLevel(LogLevel::Level level) noexcept;
@@ -38,6 +43,7 @@ public:
 
 private:
     explicit Appender( std::unique_ptr<Impl> )noexcept;
+    //std::unique_ptr<Impl> 允许 Impl 是不完整类型
 
     std::unique_ptr<Impl>m_impl;
     friend class detail::AppenderAccess;
@@ -46,7 +52,7 @@ private:
 
 using AppenderPtr = std::shared_ptr<Appender>;
 PANS_API AppenderPtr MakeStdoutAppender();
-PANS_API AppenderPtr MakeFileAppender();
+PANS_API AppenderPtr MakeFileAppender(std::string file_name);
 
 
 } // namespace pans
