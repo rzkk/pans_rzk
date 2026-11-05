@@ -23,7 +23,7 @@ public:
     public:
         //具体干活的 ， 负责将record 内容传递给 buffer 中
         virtual void format(const LogRecordView& record , FormattedRecordBuffer & output) const = 0;
-        virtual ~FormatItem() = 0;
+        virtual ~FormatItem() = default;  // 这里应该是 default , 不能为 = 0 
     };
 public:
     explicit Formatter(std::string_view pattern);

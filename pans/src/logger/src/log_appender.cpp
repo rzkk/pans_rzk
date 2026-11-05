@@ -34,15 +34,19 @@ void Appender::sync(){
     m_impl->sync();
 }
 
-
+Appender::~Appender() = default;
 ///////
 //Appender::Impl 具体实现
 void Appender::Impl::setLevel(LogLevel::Level level)noexcept{
-    m_level.store(level , std::memory_order_relaxed); // ? 需要 memory_order_release 吗
+    m_level.store(level , std::memory_order_relaxed); //  需要 memory_order_release 吗
 }
 LogLevel::Level Appender::Impl::getLevel()const noexcept{
-    return  m_level.load( std::memory_order_relaxed); // ? 需要 memory_order_acquire 吗
+    return  m_level.load( std::memory_order_relaxed); //  需要 memory_order_acquire 吗
 }
+/*notes：  
+不需要 memory_order_acquire
+std::memory_order_relaxed 足够 ， m_level 有默认值 DEBUG 
+*/
 void Appender::Impl::flush(){
     std::lock_guard<std::mutex>lock(m_mutex);
     flushUnlocked();
@@ -83,8 +87,10 @@ void Appender::Impl::append(LogLevel::Level level , std::string_view formatted_r
 class StdoutAppenderImpl final: public Appender::Impl{
 protected:
     // ? 这里的 write 是 noexcept的吗
+    /*notes : std::cout.write 不是noexcept  ， 所以应该去掉writeUnlocked 的 noexcept */ 
     virtual void writeUnlocked(std::string_view formatted_record) noexcept override{
         std::cout.write( formatted_record.data(),static_cast<std::streamsize>(formatted_record.size()));
+        
         /*notes :std::cout.write
         1 #include <iostream>  定义于 std::basic_ostream 类模板中
             std::ostream& write(const char* s, std::streamsize count);
@@ -96,11 +102,11 @@ protected:
         4 C 语言的 std::fwrite 接收 const void*，任何类型的指针都能直接传入；而 C++ 的 write 成员函数严格要求 const char*，直接传入整型数组或结构体指针会导致编译报错。
         */
     }
-    virtual void flushUnlocked() noexcept override{
+    virtual void flushUnlocked()  override{
         std::cout.flush();
     }
-    virtual void syncUnlocked() noexcept override{
-        flushUnlocked();  // ? 直接调用 刷新函数吗
+    virtual void syncUnlocked()  override{
+        flushUnlocked();  //  直接调用 刷新函数
     }
 };
 class FileAppenderImpl final: public Appender::Impl{
@@ -111,7 +117,13 @@ public:
         }
         //a : append ,追加模式
         //b : 二进制形式 ，原始字节写入，在windows 上可以避免换行转换 ， win上换行需要两个字符(查一查) ， linux 上没有啥用
-        // ? file_name.c_str() 返回的C 风格字符串没有 \0 , fopen 需要的字符串应该需要 \0 ， 不会有bug吗
+        // file_name.c_str() 返回的C 风格字符串没有 \0 , fopen 需要的字符串应该需要 \0 ， 不会有bug吗
+        /*notes：
+        std::string file_name = "server.log"; 
+        调用 ： file_name.c_str()  得到 s e r v e r . l o g \0 
+         \0 是C++ 标准保证的
+         data() 也有相同的 \0    
+        */
         m_file = std::fopen(file_name.c_str() , "ab");
         if(m_file == nullptr){
               throw std::system_error(errno, std::generic_category(), "failed to open logger file: " + file_name);
@@ -124,14 +136,18 @@ public:
         }
     }
 protected:
-    //// ? 这里的 write 是 noexcept的吗
-    virtual void writeUnlocked(std::string_view formatted_record) noexcept override{
+    //// 这里的 fwrite 是 noexcept的吗
+    /*notes :  C 标准 I/O 函数 , 不会抛异常， 只会使用返回值及错误状态。
+        但是不管抛不抛 ， 都可以由外层统一捕获
+    */
+   
+    virtual void writeUnlocked(std::string_view formatted_record)  override{
        std::fwrite(formatted_record.data() , 1 , formatted_record.size() , m_file);
     }
-    virtual void flushUnlocked() noexcept override{
+    virtual void flushUnlocked()  override{
         std::fflush(m_file);
     }
-    virtual void syncUnlocked() noexcept override{
+    virtual void syncUnlocked()  override{
         flushUnlocked();
 #if defined(_WIN32)
         ::_commit(::_fileno(m_file));
@@ -164,7 +180,7 @@ protected:
     }
 private:
     std::FILE* m_file = nullptr;
-    // ? 因为  std::ofstream C++20 没法获取底层的文件描述符 ， 比较难实现sync 和flush 接口
+    //  因为  std::ofstream C++20 没法获取底层的文件描述符 ， 比较难实现sync 和flush 接口
     //  使用 FILE*  会很方便实现sync 和flush 接口 ， 调用fwrite 和fflush 不会抛异常 ， 只会返回值 和设置 errorno
 };
 
