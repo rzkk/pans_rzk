@@ -1,0 +1,113 @@
+{
+    // "todo-tree.ripgrep.ripgrep": "C:\\Users\\rzk\\AppData\\Local\\Microsoft\\WinGet\\Links\\rg.exe",
+    "todo-tree.ripgrep.ripgrep": "/usr/bin/rg",
+    "todo-tree.regex.enableMultiLine": true,
+    // "todo-tree.regex.regex": "((%|#|//|<!--|/\\*|^\\s*\\*)\\s*($TAGS)|^\\s*- \\[ \\])",
+    "todo-tree.regex.regex": "(/\\*+\\s*($TAGS)[\\s\\S]*?\\*/)|((%|#|//|<!--|^\\s*\\*)\\s*($TAGS)[^\\r\\n]*)|(^\\s*- \\[ \\])",
+
+    "todo-tree.general.tags": [   
+
+        "todo",  //添加自定义的标签成员,将在下面实现它们的样式
+        "bug",
+        "tag",
+        "done",
+        "mark",
+        "test",
+        "update",
+        "difference",
+        "ly",
+        "?",
+        "note",
+        "tostudy"
+     ],
+   "todo-tree.regex.regexCaseSensitive": false,
+   "todo-tree.highlights.defaultHighlight": {  
+      //如果相应变量没赋值就会使用这里的默认值
+      "foreground": "#eafa05",    //字体颜色
+      // "background": "yellow",   //背景色
+      "icon": "check",       //标签样式 check 是一个对号的样式
+      // "rulerColour": "yellow",   //边框颜色
+      "type": "text-and-comment",  //填充色类型  可在TODO TREE 细节页面找到允许的值 tag
+      //"type": "tag"  , // 仅高亮标签
+      "iconColour": "#eafa05"    //标签颜色
+   },
+   "todo-tree.highlights.customHighlight": {
+      //todo     需要做的功能
+      "todo": {
+        "icon": "alert",       //标签样式
+        // "background": "#c9c552",  //背景色
+         // "rulerColour": "#c9c552", //外框颜色
+        "foreground": "#f30808",  //字体颜色
+        "iconColour": "#f10606" //标签颜色
+      },
+  //? 待查   
+      "?": {
+        "icon": "alert",      //标签样式
+        //"background": "#e06e10",  //背景色
+        //"rulerColour": "#e06e10", //外框颜色
+        "foreground": "#f30808",  //字体颜色
+        "iconColour": "#f30606"  //标签颜色
+      },
+      // 必须要修复的BUG  
+      "bug": {
+        // "background": "#eb5c5c",
+        "icon": "bug",
+        // "rulerColour": "#eb5c5c",
+        "foreground": "#f30808",  //字体颜色
+        "iconColour": "#f30808"
+      },
+      //tag    标签
+      "tag": {
+        // "background": "#38b2f4",
+        "icon": "tag",
+        // "rulerColour": "#38b2f4",
+        "iconColour": "#38b2f4",
+        "foreground": "#38b2f4"  //字体颜色
+      },
+      //done   已完成
+      "done": {
+      // "background": "#5eec95",
+        "icon": "check",
+      // "rulerColour": "#5eec95",
+        "iconColour": "#5eec95",
+        "foreground": "#5eec95"
+        },
+      //mark     标记一下
+      "mark": {
+        // "background": "#f90",
+        "icon": "note",
+        //"rulerColour": "#f90",
+        "iconColour": "#f90",
+        "foreground": "#f90",
+         "type": "text-and-comment"
+      },
+   //mark     标记一下
+      "note": {
+        // "background": "#f90",
+        "icon": "note",
+        //"rulerColour": "#f90",
+        "iconColour": "#eafa05",
+        "foreground": "#eafa05", 
+      },
+        //test   测试代码
+      "test": {
+        "icon": "flame",
+          "iconColour": "#df7be6",
+        "foreground": "#eafa05"
+      },
+      //update  优化升级点
+      "update": {
+        // "background": "#d65d8e",
+        "icon": "versions",
+        //"rulerColour": "#d65d8e",
+      "iconColour": "#d65d8e",
+        },
+      "tostudy": {
+        "icon": "note",       //标签样式
+        // "background": "#c9c552",  //背景色
+         // "rulerColour": "#c9c552", //外框颜色
+        "iconColour": "#f90",
+        "foreground": "#f90"
+      },
+    }   
+}

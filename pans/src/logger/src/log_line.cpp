@@ -31,11 +31,15 @@ struct LogLine::Impl final{
         m_streamBuffer(m_inlineBuffer),
         m_stream(&m_streamBuffer){}
 
+    /*notes: 
+
+    */
     [[nodiscard]] LogRecordView getRecord()const noexcept{
+        std::cout<<"Log_line.cpp:: getRecord()"<<__LINE__<< "  " <<m_inlineBuffer.view() << std::endl;
         return {
             m_level,
             m_logger.getName(),
-            m_inlineBuffer.view(),
+            m_inlineBuffer.view(),  // 这里是日志消息的内容
             m_timestamp,
             m_elapsed,
             m_threadId,
@@ -66,7 +70,6 @@ LogLine::LogLine(Logger&logger, LogLevel::Level level , std::uint32_t line , std
     static_assert(sizeof(Impl) <= LOG_LINE_IMPL_SIZE, "LogLine inline implementation storage is too small");
     static_assert(alignof(Impl) <= alignof(std::max_align_t), "LogLine implementation requires excessive alignment");
     std::construct_at(reinterpret_cast<Impl*>(m_implStorage), logger, level, line, file_name);  // 在栈数组上构造对象  // 在特定位置上构造对象  // ？placement new
- 
 }
 
 LogLine::Impl& LogLine::getImpl() noexcept{
@@ -104,7 +107,7 @@ void LogPrintf(Logger& logger , LogLevel::Level level, std::uint32_t line, std::
     //2 防御性编程：format 为 null 时写入占位文本
         //return 触发 log_line 析构 → 日志被提交
    if(format == nullptr){
-        log_line.stream() << "<null-format>";
+        log_line.stream() << "<null-format>";   //像 LogLine::InLineBuffer 写入
         return ;
    }
 
@@ -149,6 +152,7 @@ void LogPrintf(Logger& logger , LogLevel::Level level, std::uint32_t line, std::
     if(message_size <  inline_buffer.size()){  // 必须<  , 因为 std::vsnprintf 除了格式化结果，还需要保存一个结尾的 '\0'
         va_end(arguments_copy);
         log_line.stream().write(inline_buffer.data() , static_cast<std::streamsize>(message_size));
+        std::cout<<"LogLine::LogPrintf "<<__LINE__<<" "<< inline_buffer.data()  <<std::endl;
         return ;   
     }
 
@@ -161,6 +165,7 @@ void LogPrintf(Logger& logger , LogLevel::Level level, std::uint32_t line, std::
         return;
     }
     log_line.stream().write(overflow_buffer.data(), static_cast<std::streamsize>(message_size));
+    std::cout<<"LogLine::LogPrintf "<<__LINE__<<" "<< overflow_buffer.data()  <<std::endl;
     // 到这里还只是在内存里格式化这条日志, 出了这个函数，log_line对象析构，才把日志从内存提交到logger的appender中去
 }
 

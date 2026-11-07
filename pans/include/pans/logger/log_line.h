@@ -38,7 +38,8 @@ private:
     // 只声明，没有指针指向  // logLine 的构造频率很高 ， 需要在栈上分配
     struct Impl;  // 其含有InlineBuffer ,  内存大小未知 
     static constexpr std::size_t LOG_LINE_IMPL_SIZE = 1024;
-    // 要求数组满足平台的对齐规则最大的对齐
+    // 要求数组满足平台的对齐规则最大的对齐 , 比如说最大的是八字节，俺就按照八字节对齐
+    //否则std::byte的数组会要求一字节对齐
     alignas(std::max_align_t) std::byte m_implStorage[LOG_LINE_IMPL_SIZE];  // 在m_implStorage 上构造 LogLine::Impl
     [[nodiscard]] Impl& getImpl() noexcept;
 };

@@ -15,6 +15,7 @@ Formatter::Formatter(std::string_view pattern):m_pattern(pattern){
 
 void Formatter::format( const LogRecordView& record , FormattedRecordBuffer & output)const{
     // 遍历得到的 m_items，将每一个都追加到 output buffer
+    //std::vector< std::unique_ptr<FormatItem> >m_items;
     for(const auto &item : m_items ){
         item->format(record , output);
     }
