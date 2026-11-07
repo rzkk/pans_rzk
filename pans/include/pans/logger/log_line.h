@@ -36,10 +36,10 @@ public:
 
 private:
     // 只声明，没有指针指向  // logLine 的构造频率很高 ， 需要在栈上分配
-    struct Impl;
+    struct Impl;  // 其含有InlineBuffer ,  内存大小未知 
     static constexpr std::size_t LOG_LINE_IMPL_SIZE = 1024;
     // 要求数组满足平台的对齐规则最大的对齐
-    alignas(std::max_align_t) std:: byte m_implStorage[LOG_LINE_IMPL_SIZE];
+    alignas(std::max_align_t) std::byte m_implStorage[LOG_LINE_IMPL_SIZE];  // 在m_implStorage 上构造 LogLine::Impl
     [[nodiscard]] Impl& getImpl() noexcept;
 };
 
@@ -88,3 +88,15 @@ PANS_API void LogPrintf(Logger& logger, LogLevel::Level level, std::uint32_t lin
 #define LOG_FATAL PANS_LOG_FATAL(g_logger)
 
 #endif // PANS_INCLUDE_PANS_LOGGER_LOG_H
+
+
+
+
+/*notes : 
+alignas(std::max_align_t) std::byte m_implStorage[LOG_LINE_IMPL_SIZE];  // 在m_implStorage 上构造 LogLine::Impl
+    1 为什么用 alignas(std::max_align_t) 而不是 alignas(Impl)？
+        答：这是 Pimpl 模式的精髓所在：这行代码写在头文件（.h）里，而在头文件中 struct Impl; 只有一个前置声明（Forward Declaration），属于不完整类型。
+        编译器在编译头文件时，根本不知道 sizeof(Impl) 和 alignof(Impl) 是多少。
+        因此，可以用一个宏/常量 LOG_LINE_IMPL_SIZE 预留了足够大的字节数，并用 alignas(std::max_align_t) 强制该数组按照当前平台标准标量类型的最大对齐要求（64 位系统上通常是 8 或 16 字节）进行内存对齐，
+        确保后续把 Impl 放进去时不会因内存未对齐而触发硬件异常或未定义行为（UB）。 // Impl 相当于结构体， 里面很多
+*/

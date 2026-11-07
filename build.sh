@@ -22,9 +22,10 @@ cmake -S . -B "$BUILD_DIR"
 # --parallel：启用并行编译
 # nproc：获取当前可用的 CPU 逻辑处理器数量
 # CPU_NUM = $(nproc) *1.5
-# cmake --build "$BUILD_DIR"  --parallel "($nproc)"
-cmake --build "$BUILD_DIR"  --parallel 8
+#cmake --build "$BUILD_DIR"  --parallel "($nproc)"
+#cmake --build "$BUILD_DIR"  --parallel 8
 
+cmake --build "$BUILD_DIR" --parallel $(( ($(nproc) * 3 + 1) / 2 ))
 
 # --test-dir：指定测试所在的 构建目录  # 不是目标文件目录
 # --output-on-failure：只在测试失败时输出详细信息
