@@ -29,18 +29,19 @@ set(PANS_THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party" CACHE PATH "third-p
 #PANS_THIRD_PARTY_OUTPUT_DIR :编译产物根目录，默认 third_party/output
 set(PANS_THIRD_PARTY_OUTPUT_DIR "${PANS_THIRD_PARTY_DIR}/output" CACHE PATH "compiled third-party output")
 set(PANS_THIRD_PARTY_BUILD_TYPE Release CACHE STRING "third-party build-type")
-
 # 为缓存变量指定了建议的可选值，方便在 CMake GUI 中选择
 set_property(CACHE PANS_THIRD_PARTY_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
 
+
 #语法 ：  option(变量名 "说明" 默认值)
 # 可以使用 -DPANS_UPDATE_SUBMODULES=OFF 覆盖默认值，进行关闭。
-#含义：  是否在依赖缺失时初始化或更新 Git 子模块。 源码缺失时，是否尝试通过 Git 初始化子模块
+#含义：  是否在依赖缺失时初始化或更新 Git 子模块。 源码缺失时，是否尝试通过 Git 初始化子模块 , 是否下载缺失的第三方库
 option(PANS_UPDATE_SUBMODULES "Initialize missing third-party git submodules" ON)
 
 # 是否优先复用 third_party/output 中与当前配置兼容的已编译依赖。 是否复用已编译产物
 # 关闭后通常会强制走第三方依赖的重新构建流程。
 option(PANS_REUSE_INSTALLED_DEPENDENCIES "Reuse compatible dependencies from third_party/output" ON)
+
 
 #流程:foreach 拆分 → 检查哨兵文件 → 收集缺失项 → 若缺失则 git submodule update --init --recursive -- <paths> → 再校验一次。
 # CMake 没有真正独立的数组类型，通常使用分号分隔的字符串表示列表：子模块完整性检查清单。
@@ -56,7 +57,8 @@ set(_pans_required_submodules
     "third_party/zlib|CMakeLists.txt"
 )
 
-# 查找 Git。只有在需要初始化或更新子模块时，后续逻辑才需要使用它；
+
+# 查找系统的 Git 可执行程序。只有在需要初始化或更新子模块时，后续逻辑才需要使用它；
 # 得到Git_FOUND ， GIT_EXECUTABLE
 # QUIET 表示查找失败时不要输出普通提示。
 find_package(Git QUIET)
@@ -65,7 +67,6 @@ find_package(Git QUIET)
 #     function(function_name parameter1 parameter2)
 #     ...
 #       endfunction()
-
 # notes: list 构建
 # 方式 1：多元素直接定义（底层等价于 "item1;item2;item3"）
 # set(_pans_required_submodules
@@ -75,6 +76,9 @@ find_package(Git QUIET)
 
 # # 方式 2：通过 string(REPLACE) 将竖线替换为分号，直接生成含 2 个元素的列表 parts
 #   string(REPLACE "|" ";" parts "${entry}") 
+
+
+# 更新子模块 ， 同步子模块代码
 function(pans_init_third_party_submodules)
     # function() 会创建局部变量作用域；这里不会污染调用者的 missing_submodules。
     set(missing_submodules)  #刚开始为空
@@ -127,7 +131,7 @@ function(pans_init_third_party_submodules)
         ERROR_VARIABLE submodule_error            # 捕获标准错误
     )
 
-    if(NOT submodule_result EQUAL 0)#接着检查退出码
+    if(NOT submodule_result EQUAL 0) #接着检查退出码
         #message(FATAL_ERROR "...")  会立即终止 CMake 配置。
         message(FATAL_ERROR    
             "git submodule update failed (exit=${submodule_result}):\n"
@@ -150,11 +154,12 @@ endfunction()
 pans_init_third_party_submodules() # 执行一下函数
 
 
-#如何知道之前编译过的二进制库，还能不能继续使用？ 最基本的条件是：源码版本没有变化。
+# 如何知道之前编译过的二进制库，还能不能继续使用？ 最基本的条件是：源码版本没有变化。
 # 获取子模块commit ID的函数 -> 用于判断子模块是否被更新过
-# 取得依赖源码版本，作为后面缓存键的一部分。源码版本变化时，旧二进制缓存必须失效。
+# 取得依赖源码版本，作为后面缓存键的一部分。
+# 源码版本变化时，旧二进制缓存必须失效。 
 function(pans_get_source_revision source_dir output_variable)
-     # Git 仓库（包括 .git 为文件的子模块）使用精确 commit ID。
+    # Git 仓库（包括 .git 为文件的子模块）使用精确 commit ID。
     if(Git_FOUND AND EXISTS "${source_dir}/.git") #有 git 时用 commit SHA 作为版本标识。
         execute_process(
             #git -C third_party/yaml-cpp rev-parse HEAD 
@@ -180,6 +185,7 @@ endfunction()
 
 
 #给它一个第三方库的信息，它就自动帮你创建配置、编译、安装、缓存和依赖管理任务。
+#给子模块生成一个构建规则
 function(pans_add_cmake_dependency)
     # 解析函数的命名参数 ， 
     # cmake_parse_arguments() 主要处理三种关键字。三组参数依次是：布尔选项、单值参数、多值参数。
@@ -211,6 +217,8 @@ function(pans_add_cmake_dependency)
                                 # dep_SENTINELS =           #sentinels：哨兵；岗哨；守卫者
                                 #     include/yaml-cpp/yaml.h
                                 #     lib/libyaml-cpp.a
+    # DEPENDS ： 三方库 依赖的 其他库
+    # KEY_MATERIAL ： 与依赖相关的其他材料，例如配置文件、资源文件等
     cmake_parse_arguments(PARSE_ARGV 0 dep ""
         "NAME;SOURCE_DIR;SOURCE_REVISION"
         "CMAKE_ARGS;SENTINELS;DEPENDS;KEY_MATERIAL")
@@ -228,8 +236,7 @@ function(pans_add_cmake_dependency)
         # 现在切换成 ：Clang 18 + Linux + x86_64 + Debug   ， 就不能再复用以前的静态库
         # CONCAT : 将多个变量连接成一个字符串 , 只是拼接字符串，不会自动添加分隔符。
         # SHA256: 计算字符串的 SHA256 哈希值
-        
-    
+    # 所有可能影响编译结果的因子 拼成字符串，保存下来
     string(CONCAT cache_material
         "${dep_SOURCE_REVISION};${CMAKE_C_COMPILER};${CMAKE_C_COMPILER_ID};"
         "${CMAKE_C_COMPILER_VERSION};${CMAKE_CXX_COMPILER};${CMAKE_CXX_COMPILER_ID};"
@@ -239,11 +246,11 @@ function(pans_add_cmake_dependency)
         "${CMAKE_MSVC_RUNTIME_LIBRARY};${PANS_THIRD_PARTY_BUILD_TYPE};static;"
         "${dep_CMAKE_ARGS};${dep_KEY_MATERIAL}")
 
-    # 以上配置变化都会触发新的编译，不会误用前一个结果，从而保证第三方库的  ABI一致
+    # 以上配置变化都会触发新的编译，不会误用前一个结果，从而保证第三方库的  ABI一致   #ABI : 二进制接口
 
     string(SHA256 cache_key "${cache_material}")
-    #   string(SUBSTRING <string> <begin> <length> <output_variable>)
 
+    # string(SUBSTRING <string> <begin> <length> <output_variable>)
     string(SUBSTRING "${cache_key}" 0 16 cache_key_short) # SUBSTRING : 从字符串中提取子字符串    
 
     # PANS_THIRD_PARTY_OUTPUT_DIR:  ${PANS_THIRD_PARTY_DIR}/output
@@ -291,13 +298,28 @@ function(pans_add_cmake_dependency)
     #选项	作用
     # -S	指定源码目录，CMake 会从这里查找 CMakeLists.txt
     # -B	指定构建目录，用于生成 CMakeCache.txt 和构建文件
-    # -G	指定生成器，例如 Ninja、Unix Makefiles
+    # -G	指定生成器，例如 Ninja、Unix Makefiles ， Visual Studio 17 2022
     # -A：选择支持该选项的生成器所使用的目标平台，例如 Visual Studio 的 x64。
     # -T：选择支持该选项的生成器所使用的工具集，例如 Visual Studio 的 v143。
 
     set(configure_command "${CMAKE_COMMAND}" -S "${dep_SOURCE_DIR}" -B "${build_dir}" -G "${CMAKE_GENERATOR}")
 
     # 然后把当前项目使用的目标平台和编译工具集传递给第三方库，保持一致
+    # 如果主工程指定了目标平台和编译工具集，就将相同的工具集配置传递给第三方库，尽量保证第三方库与 pans 使用一致的编译工具链。
+    #CMAKE_GENERATOR_PLATFORM: 用于指定构建系统生成器（Generator）所使用的目标平台，通常用于选择编译目标架构，例如 x64、Win32、ARM64。
+        # 如 windows 下 ：cmake -S . -B build -G "Visual Studio 17 2022" -A x64  
+            # -A :指定目标平台为 64 位 
+            # 此时 ： 
+                # message(STATUS "Generator: ${CMAKE_GENERATOR}")          -----> -- Generator: Visual Studio 17 2022
+                # message(STATUS "Platform: ${CMAKE_GENERATOR_PLATFORM}")  ------>  -- Platform: x64
+            #常见平台值： Win32：32 位 x86
+            #            x64：64 位 x86-64
+            #            ARM64：64 位 ARM
+        #注 ：1  CMAKE_GENERATOR_PLATFORM 的值通常由 CMake 自动推导，或者在调用 CMake 时通过 -A 参数显式指定。
+        #     2  -A 只适用于支持平台选择的生成器，不是所有 CMake 生成器都支持它 ， 例如 Unix Makefiles 就不支持 -A 参数。
+    # CMAKE_GENERATOR_TOOLSET ：使用什么编译工具集 
+        # windows下使用， 如 -T -v143  ,  得到 CMAKE_GENERATOR_TOOLSET = v143
+        # Linux 下常用的 Ninja、Unix Makefiles 通常不使用 CMAKE_GENERATOR_TOOLSET
     if(CMAKE_GENERATOR_PLATFORM)  # 先判断是否有值
         list(APPEND configure_command -A "${CMAKE_GENERATOR_PLATFORM}")
     endif()
@@ -305,34 +327,41 @@ function(pans_add_cmake_dependency)
         list(APPEND configure_command -T "${CMAKE_GENERATOR_TOOLSET}")
     endif()
     
-    # "-DCMAKE_INSTALL_LIBDIR=lib" ： 告诉遵循 GNUInstallDirs 等约定的第三方工程，库文件安装目录使用 lib
+    # "-DCMAKE_INSTALL_LIBDIR=lib" ：   告诉遵循 GNUInstallDirs 等约定的第三方工程，库文件安装目录使用 lib
     #                                   但该变量是否实际生效，取决于第三方工程是否使用了它。
     #  "-DCMAKE_POSITION_INDEPENDENT_CODE=ON" ：要求相关编译目标默认使用位置无关代码。
     # BUILD_TESTING ：用于关闭支持该标准测试选项的第三方工程的测试构建。
+    # 告诉 CMake，以后把编译好的库安装到哪个目录。 
     list(APPEND configure_command
-        "-DCMAKE_INSTALL_PREFIX=${install_dir}"    #指定安装的根目录
-        "-DCMAKE_INSTALL_LIBDIR=lib"
+        "-DCMAKE_INSTALL_PREFIX=${install_dir}"    #指定安装的根目录，  第三方库最终安装的位置，保存公开头文件、静态库和 CMake 包配置文件。
+        "-DCMAKE_INSTALL_LIBDIR=lib"               # 指定库文件的安装目录 ，  即 库文件将被安装到 ${install_dir}/lib
         "-DCMAKE_BUILD_TYPE=${PANS_THIRD_PARTY_BUILD_TYPE}"
         "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
         "-DBUILD_TESTING=OFF"
     )
     
+    # 让主工程和第三方库尽量使用一致的编译器，是合理的工程设计
     if(CMAKE_C_COMPILER)
         list(APPEND configure_command "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
     endif()
     if(CMAKE_CXX_COMPILER)
         list(APPEND configure_command "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
     endif()
-    if(CMAKE_TOOLCHAIN_FILE)
+
+    #CMAKE_TOOLCHAIN_FILE :
+        #  tool chain : 工具链  
+        #工具链文件包含的信息可能远远多于编译器路径。工具链文件更像是一个完整的构建环境配置包。
+        # 
+    if(CMAKE_TOOLCHAIN_FILE) 
         list(APPEND configure_command "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
     endif()
     if(CMAKE_MSVC_RUNTIME_LIBRARY)
         list(APPEND configure_command "-DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}")
     endif()
-    if(CMAKE_OSX_ARCHITECTURES)
+    if(CMAKE_OSX_ARCHITECTURES) #指定 Apple 平台目标架构
         list(APPEND configure_command "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}")
     endif()
-    if(CMAKE_OSX_DEPLOYMENT_TARGET)
+    if(CMAKE_OSX_DEPLOYMENT_TARGET) # 指定 Apple 系统最低部署版本
         list(APPEND configure_command "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
     endif()
     list(APPEND configure_command ${dep_CMAKE_ARGS}) # 把调用者传入的、每个第三方库特有的配置选项追加进去。
@@ -349,7 +378,10 @@ function(pans_add_cmake_dependency)
     # 这里实际上是在 pans 的构建任务中，启动了另一个独立的 CMake 配置过程。
     # 2 ：  cmake --build build/yaml-cpp --config Release --parallel 8
     # CMAKE_BUILD_PARALLEL_LEVEL 在 CMake 中主要是一个环境变量 ， 用于控制并行编译的线程数。  该变量定义在顶层 cmakelists 
-    # cmake --install build/yaml-cpp --config Release   安装第三方库 
+    # cmake --install build/yaml-cpp --config Release   告诉 CMake，现在执行这个构建目录对应的安装规则。
+        # 还可以在执行--install 时指定目录
+            # 如： cmake --install build/yaml-cpp  --prefix /opt/my-yaml-cpp
+            # 前一个是 构建目录，后一个是安装目录
     # COMMAND "${CMAKE_COMMAND}" "-DPANS_DEPS_STAMP_FILE=${cache_stamp}" "-DPANS_DEPS_STAMP_VALUE=${cache_key}" -P "${PROJECT_SOURCE_DIR}/cmake/writeDependencyStamp.cmake"
         # -P 表示以脚本模式执行 .cmake 文件    ， 
         #等于：

@@ -59,7 +59,7 @@ git submodule add -b master https://github.com/madler/zlib.git third_party/zlib
 
 ## 同步代码
 ### 首次同步pans
-git clone --recurse-submodules https://gitee.com/huajianke2026/pans.git
+git clone --recurse-submodules https://gitee.com/huajianke2026/pans.git   ## 深克隆 ， 把第三方库也一块同步
 
 ### 更新pans
 如果已经同步过pans, 只需要更新其子模块，执行：
