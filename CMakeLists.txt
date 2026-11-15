@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.25)
 
 #强制指定 C / C++ 编译器路径  ,开发过程有可能多套环境 ， 指定版本
-set(CMAKE_C_COMPILER "/usr/bin/gcc-13" CACHE FILEPATH "C compiler" FORCE )
-set(CMAKE_CXX_COMPILER "/usr/bin/g++-13" CACHE FILEPATH "C++ compiler" FORCE )
+# set(CMAKE_C_COMPILER "/usr/bin/gcc-13" CACHE FILEPATH "C compiler" FORCE )
+# set(CMAKE_CXX_COMPILER "/usr/bin/g++-13" CACHE FILEPATH "C++ compiler" FORCE )
+
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    set(CMAKE_C_COMPILER "/usr/bin/gcc-13" CACHE FILEPATH "C compiler" FORCE)
+    set(CMAKE_CXX_COMPILER "/usr/bin/g++-13" CACHE FILEPATH "C++ compiler" FORCE)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,9 +42,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 # 根目录下的 ./lib 
 
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/pansOptions.cmake")
+# include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/pansOptions.cmake")
+
+include(cmake/pansOptions.cmake)
+include(cmake/pansDependencies.cmake)
+include(cmake/functions.cmake)
 
 add_subdirectory(pans)
+
+
+
 
 if(PANS_BUILD_TESTS)
     enable_testing()
@@ -49,3 +61,31 @@ endif()
 if(PANS_BUILD_TOOLS)
     add_subdirectory(tools)
 endif()
+
+
+set(PANS_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/pans")
+
+configure_package_config_file(
+    cmake/pansConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/pansConfig.cmake"
+    INSTALL_DESTINATION "${PANS_INSTALL_CMAKEDIR}"
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/pansConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
+)
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/pansConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/pansConfigVersion.cmake"
+    DESTINATION "${PANS_INSTALL_CMAKEDIR}"
+)
+
+install(
+    EXPORT pansTargets
+    FILE pansTargets.cmake
+    NAMESPACE pans::
+    DESTINATION "${PANS_INSTALL_CMAKEDIR}"
+)

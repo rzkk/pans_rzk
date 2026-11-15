@@ -8,6 +8,8 @@ target_compile_options(pans_options INTERFACE
             -Wextra           # 额外警告（比 -Wall 更严格） #开启 -Wall 未包含的额外警告（如未使用的参数、符号比较等）  # 通常与 -Wall 配合使用
             -Wpedantic        # 严格要求符合 ISO C++ 标准，如果用了非标准的语法扩展就报警 ， 即不能使用 -std=gnu++20 
             -fno-strict-aliasing #禁用“严格别名优化”，防止强转指针类型时被编译器优化出诡异 Bug
+
+             -Wno-builtin-macro-redefined # 消除__FILE__重定义告警
     >
 )
 
