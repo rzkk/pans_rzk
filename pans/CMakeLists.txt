@@ -18,6 +18,9 @@ file(GLOB_RECURSE PANS_HEADERS CONFIGURE_DEPENDS
 
 add_library(pans STATIC ${PANS_SOURCES} ${PANS_HEADERS})  # 生成 libpans.a
 
+redefine_file_macro("${PANS_SOURCES}")
+# redefine_file_macro("${PANS_HEADERS}")
+
 
 # 告诉使用 pans 的其他 CMake 目标至少需要 C++20
 target_compile_features(pans PUBLIC cxx_std_20)
@@ -39,6 +42,14 @@ target_include_directories(pans
 # pans_options 是项目内部的编译配置，不传递给外部使用者  // 使用private 
 # target_link_libraries(pans PRIVATE pans_options) # 继承所有编译/链接选项
 target_link_libraries(pans PRIVATE  pans_options)   # 使用 PRIVATE ， 外面的test 就无法使用pans cmake定义的细节 如PANS_DEBUG 
+target_link_libraries(pans PUBLIC Threads::Threads)
+target_link_libraries(pans PRIVATE PkgConfig::PANS_LIBDW)  # linux 与win 中有不同的写法
+
+target_link_libraries(pans PUBLIC yaml-cpp::yaml-cpp)
+# target_link_libraries(pans PRIVATE Boost::context)
+
+add_dependencies(pans pans_third_party_dependencies)
+
 
 
 # 主库可能需要更严格的编译选项
@@ -74,6 +85,10 @@ install(
         PATTERN "*.h"
         PATTERN "*.hpp"
 )
+
+install(TARGETS pans_options EXPORT pansTargets)
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # install(EXPORT pansTargets
 

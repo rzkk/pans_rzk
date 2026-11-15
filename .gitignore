@@ -22,3 +22,24 @@ bin-release/
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
 .aider*
+
+
+# CMake
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# C++ intermediate files
+*.o
+*.obj
+
+# Logs
+*.log
+
+# Local secrets
+.env
+.env.local
+
+# Editor local files
+.idea/

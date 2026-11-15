@@ -6,6 +6,8 @@ file(GLOB PANS_TEST_SOURCES CONFIGURE_DEPENDS    # 作用就是 文件的增删 
 
 
 list(SORT PANS_TEST_SOURCES)
+redefine_file_macro("${PANS_TEST_SOURCES}")
+
 
 find_package(Threads REQUIRED)
 
